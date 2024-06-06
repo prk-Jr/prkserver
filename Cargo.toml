@@ -10,17 +10,17 @@ keywords = [
     "mysql",
     "axum",
     "server",
+    "CLI",
+    "bin",
 ]
 categories = ["database", "web", "web-programming::http-server"]
 license = "MIT"
 description = "`prkserver` is a CLI tool that helps create a backend server in Rust using Axum and SQLx. It configures everything based on a provided `config.toml` file."
 repository = "https://github.com/prk-Jr/prkserver.git"
 
+crate-type = "bin"
+
 [dependencies]
-# clap = { version = "4.5.4", features = ["cargo"] }
-# dialoguer = "0.11.0"
-# fs_extra = "1.2"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8.14"
-# tokio = { version = "1", features = ["full"] }
 convert_case = "0.6.0"
