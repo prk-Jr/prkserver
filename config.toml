@@ -4,6 +4,7 @@ database_type = "mysql"
 
 [[models]]
 name = "User"
+table_name = "users"
 fields = [
     { name = "id", type = "int" },
     { name = "username", type = "string" },
@@ -12,6 +13,7 @@ fields = [
 
 [[models]]
 name = "Post"
+table_name = "posts"
 fields = [
     { name = "id", type = "int" },
     { name = "title", type = "string" },

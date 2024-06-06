@@ -10,5 +10,4 @@ edition = "2021"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8.14"
 # tokio = { version = "1", features = ["full"] }
-include_dir = "0.7.3"
 convert_case = "0.6.0"

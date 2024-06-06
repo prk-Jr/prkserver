@@ -1,7 +1,12 @@
-use crate::template_create::*;
+use crate::output::cargo_toml_content::cargo_toml_content;
+use crate::output::compose_yaml_content::compose_yaml_content;
+use crate::output::database_connection_content::*;
+use crate::output::docker_ignore_content::docker_ignore_conent;
+use crate::output::dockerfile_content::dockerfile_content;
+use crate::output::env_content::env_content;
+use crate::output::main_content::main_content;
 use crate::{generate_endpoint, generate_model, Config};
 use convert_case::Casing;
-use include_dir::{include_dir, Dir};
 use std::fs;
 
 fn create_file(project_name: &str, file_path: &str, content: &str) -> std::io::Result<()> {
@@ -12,7 +17,6 @@ fn create_file(project_name: &str, file_path: &str, content: &str) -> std::io::R
 pub fn generate_project(config: &Config) -> std::io::Result<()> {
     fs::create_dir_all(&config.project_name).expect("Failed to create dir");
     fs::create_dir_all(format!("{}/src", &config.project_name)).expect("Failed to create dir");
-    fs::create_dir_all(format!("{}/config", &config.project_name)).expect("Failed to create dir");
     create_file(
         &config.project_name,
         "Cargo.toml",
@@ -21,12 +25,32 @@ pub fn generate_project(config: &Config) -> std::io::Result<()> {
     create_file(
         &config.project_name,
         "src/main.rs",
-        &main_rs_content(&config.database_type),
+        &main_content(create_router(&config)),
     )?;
     create_file(
         &config.project_name,
-        "config/config.toml",
-        &config_toml_content(&config.database_url),
+        "src/database_connection.rs",
+        &database_connection_content(&config.database_type),
+    )?;
+    create_file(
+        &config.project_name,
+        ".env",
+        &env_content(&config.database_url),
+    )?;
+    create_file(
+        &config.project_name,
+        "Dockerfile",
+        &dockerfile_content(&config.project_name),
+    )?;
+    create_file(
+        &config.project_name,
+        ".dockerignore",
+        &docker_ignore_conent(),
+    )?;
+    create_file(
+        &config.project_name,
+        "compose.yaml",
+        &compose_yaml_content(&config.database_type),
     )?;
 
     // extract_template_files(&config.project_name).expect("Failed to extract template files");
@@ -34,27 +58,42 @@ pub fn generate_project(config: &Config) -> std::io::Result<()> {
     Ok(())
 }
 
-// static TEMPLATE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/template/backend_template");
+pub fn create_router(config: &Config) -> String {
+    let mut router = String::from("Router::new()\n");
 
-// pub fn extract_template_files(project_name: &str) -> std::io::Result<()> {
-//     TEMPLATE_DIR.extract(project_name).map_err(|e| {
-//         std::io::Error::new(
-//             std::io::ErrorKind::Other,
-//             format!("Failed to extract template files: {}", e),
-//         )
-//     })
-// }
+    for endpoint in &config.endpoints {
+        let functions1 = format!(
+            "get({}{})",
+            "get_all",
+            &endpoint
+                .path
+                .to_lowercase()
+                .replace("/", "_")
+                .replace(":", ""),
+        );
+        let functions2 = format!(
+            "{}({}{})",
+            &endpoint.endpoint_type.to_lowercase(),
+            endpoint.endpoint_type.to_lowercase(),
+            &endpoint
+                .path
+                .to_lowercase()
+                .replace("/", "_")
+                .replace(":", ""),
+        );
+        router.push_str(&format!(
+            "    .route(\"{}/all\",{})\n",
+            endpoint.path, functions1
+        ));
+        router.push_str(&format!(
+            "    .route(\"{}\",{})\n",
+            endpoint.path, functions2
+        ));
+    }
+    router
+}
 
 pub fn modify_files(project_name: &str, config: &Config) -> std::io::Result<()> {
-    // Update database URL in config.toml
-    // let config_path = format!("config.toml");
-    // let config_content = fs::read_to_string(&config_path).expect("Failed to read config file");
-    // let new_config_content = config_content.replace(
-    //     "postgres://user:password@localhost/database_name",
-    //     &config.database_url,
-    // );
-    // fs::write(config_path, new_config_content).expect("Failed to write config file");
-
     // Generate models and endpoints
     for model in &config.models {
         generate_model(project_name, model).expect("Failed to generate model");
@@ -66,11 +105,27 @@ pub fn modify_files(project_name: &str, config: &Config) -> std::io::Result<()> 
             .expect("Failed to generate module");
     }
 
+    let mut endpoint_files: Vec<String> = vec![];
     for endpoint in &config.endpoints {
-        generate_endpoint(project_name, endpoint).expect("Failed to generate endpoint");
+        let endpoint_type = endpoint.endpoint_type.clone();
+        let path = endpoint.path.clone();
+        let file = format!(
+            "{}{}",
+            endpoint_type,
+            path.replace("/", "_").replace(":", ""),
+        );
+        endpoint_files.push(file);
     }
+
+    let endpoint_files: Vec<&str> = endpoint_files.iter().map(|f| f.as_str()).collect();
+
+    for endpoint in &config.endpoints {
+        generate_endpoint(project_name, &endpoint, &config.database_type)
+            .expect("Failed to generate endpoint");
+    }
+
     if config.endpoints.len() > 0 {
-        generate_module(project_name, "/src/routes", models_names)
+        generate_module(project_name, "/src/routes", endpoint_files.clone())
             .expect("Failed to generate module");
     }
     // generate_module(project_name, "/src", vec!["models", "routes"])

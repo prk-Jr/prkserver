@@ -10,8 +10,7 @@ use config::*;
 mod template;
 use template::*;
 
-mod template_create;
-use template_create::*;
+mod output;
 
 fn main() {
     // let matches = Command::new("prkserver")
