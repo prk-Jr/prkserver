@@ -1,0 +1,30 @@
+project_name = "crud"
+database_url = "mysql://root:123456@localhost/todos"
+database_type = "mysql"
+
+[[models]]
+name = "User"
+fields = [
+    { name = "id", type = "int" },
+    { name = "username", type = "string" },
+    { name = "email", type = "string" },
+]
+
+[[models]]
+name = "Post"
+fields = [
+    { name = "id", type = "int" },
+    { name = "title", type = "string" },
+    { name = "body", type = "text" },
+    { name = "user_id", type = "int" },
+]
+
+[[endpoints]]
+model = "User"
+type = "GET"
+path = "/users"
+
+[[endpoints]]
+model = "Post"
+type = "POST"
+path = "/posts"
