@@ -60,3 +60,5 @@ prkserver
 ```
 
 This will generate a new project in a directory named after project_name specified in the config.toml.
+
+Note: Still work in Progress. 
