@@ -3,6 +3,8 @@ use std::fs;
 use convert_case::{Case, Casing};
 use serde::Deserialize;
 
+use crate::Endpoint;
+
 #[derive(Deserialize)]
 pub struct Field {
     pub name: String,
@@ -15,6 +17,7 @@ pub struct Model {
     pub name: String,
     pub table_name: String,
     pub fields: Vec<Field>,
+    pub endpoints: Vec<Endpoint>,
 }
 
 pub fn generate_model(project_name: &str, model: &Model) -> std::io::Result<()> {

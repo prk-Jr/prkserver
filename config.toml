@@ -1,32 +1,30 @@
-project_name = "crud"
-database_url = "mysql://root:123456@localhost/todos"
+project_name = "todo_app"
+database_url = "mysql://root:passowrd@localhost/todo_app"
 database_type = "mysql"
 
 [[models]]
 name = "User"
 table_name = "users"
 fields = [
-    { name = "id", type = "int" },
-    { name = "username", type = "string" },
-    { name = "email", type = "string" },
+    { name = "id", type = "i32" },
+    { name = "username", type = "String" },
+    { name = "email", type = "String" },
 ]
+endpoints = [
+    { method = "GET", path = "/users" },
+    { method = "POST", path = "/users" },
+]
+
 
 [[models]]
-name = "Post"
-table_name = "posts"
+name = "Todo"
+table_name = "todos"
 fields = [
-    { name = "id", type = "int" },
-    { name = "title", type = "string" },
-    { name = "body", type = "text" },
-    { name = "user_id", type = "int" },
+    { name = "id", type = "i32" },
+    { name = "task", type = "String" },
+    { name = "description", type = "Option<String>" },
 ]
-
-[[endpoints]]
-model = "User"
-type = "GET"
-path = "/users"
-
-[[endpoints]]
-model = "Post"
-type = "POST"
-path = "/posts"
+endpoints = [
+    { method = "GET", path = "/todos" },
+    { method = "GET", path = "/todos/:id" },
+]

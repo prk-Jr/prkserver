@@ -5,9 +5,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct Endpoint {
-    pub model: String,
-    #[serde(rename = "type")]
-    pub endpoint_type: String,
+    pub method: String,
     pub path: String,
 }
 
@@ -15,6 +13,7 @@ pub fn generate_endpoint(
     project_name: &str,
     endpoint: &Endpoint,
     database_type: &str,
+    model_name: &str,
 ) -> std::io::Result<()> {
     let endpoint_dir = format!("./{}/src/routes", project_name);
     let database_type = match database_type
@@ -30,7 +29,7 @@ pub fn generate_endpoint(
     let endpoint_path = format!(
         "{}/{}{}.rs",
         endpoint_dir,
-        endpoint.endpoint_type.to_lowercase(),
+        endpoint.method.to_lowercase(),
         endpoint
             .path
             .to_lowercase()
@@ -48,10 +47,11 @@ pub fn generate_endpoint(
     endpoint_content.push_str(&format!("use axum::response::IntoResponse;\n",));
     endpoint_content.push_str(&format!(
         "use crate::models::{}::*;\n\n",
-        endpoint.model.to_lowercase()
+        model_name.to_lowercase()
     ));
-    endpoint_content.push_str(&format!(
-        "pub async fn get_all{}(State(db): State<{}Pool>,) -> impl IntoResponse {{\n
+    if endpoint.method.to_lowercase() == "get" {
+        endpoint_content.push_str(&format!(
+            "pub async fn get_all{}(State(db): State<{}Pool>,) -> impl IntoResponse {{\n
             let query = {}::select().build();
 
             let db_reponse : Result<Vec<{}>, Error> = sqlx::query_as(&query)
@@ -63,19 +63,20 @@ pub fn generate_endpoint(
                 Err(e) => (StatusCode::BAD_REQUEST, Json(e.to_string())).into_response(),
             }}
         }}\n",
-        endpoint
-            .path
-            .to_lowercase()
-            .replace("/", "_")
-            .replace(":", ""),
-        database_type,
-        endpoint.model,
-        endpoint.model
-    ));
+            endpoint
+                .path
+                .to_lowercase()
+                .replace("/", "_")
+                .replace(":", ""),
+            database_type,
+            model_name,
+            model_name
+        ));
+    }
 
     endpoint_content.push_str(&format!(
         "pub async fn {}{}(State(db): State<{}Pool>,) -> impl IntoResponse {{\n",
-        endpoint.endpoint_type.to_lowercase(),
+        endpoint.method.to_lowercase(),
         endpoint
             .path
             .to_lowercase()

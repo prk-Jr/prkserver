@@ -61,34 +61,39 @@ pub fn generate_project(config: &Config) -> std::io::Result<()> {
 pub fn create_router(config: &Config) -> String {
     let mut router = String::from("Router::new()\n");
 
-    for endpoint in &config.endpoints {
-        let functions1 = format!(
-            "get({}{})",
-            "get_all",
-            &endpoint
-                .path
-                .to_lowercase()
-                .replace("/", "_")
-                .replace(":", ""),
-        );
-        let functions2 = format!(
-            "{}({}{})",
-            &endpoint.endpoint_type.to_lowercase(),
-            endpoint.endpoint_type.to_lowercase(),
-            &endpoint
-                .path
-                .to_lowercase()
-                .replace("/", "_")
-                .replace(":", ""),
-        );
-        router.push_str(&format!(
-            "    .route(\"{}/all\",{})\n",
-            endpoint.path, functions1
-        ));
-        router.push_str(&format!(
-            "    .route(\"{}\",{})\n",
-            endpoint.path, functions2
-        ));
+    for models in &config.models {
+        for endpoint in &models.endpoints {
+            let functions1 = format!(
+                "get({}{})",
+                "get_all",
+                &endpoint
+                    .path
+                    .to_lowercase()
+                    .replace("/", "_")
+                    .replace(":", ""),
+            );
+            let functions2 = format!(
+                "{}({}{})",
+                &endpoint.method.to_lowercase(),
+                endpoint.method.to_lowercase(),
+                &endpoint
+                    .path
+                    .to_lowercase()
+                    .replace("/", "_")
+                    .replace(":", ""),
+            );
+            if endpoint.method.to_lowercase() == "get" {
+                router.push_str(&format!(
+                    "    .route(\"{}/all\",{})\n",
+                    endpoint.path, functions1
+                ));
+            }
+
+            router.push_str(&format!(
+                "    .route(\"{}\",{})\n",
+                endpoint.path, functions2
+            ));
+        }
     }
     router
 }
@@ -106,25 +111,34 @@ pub fn modify_files(project_name: &str, config: &Config) -> std::io::Result<()> 
     }
 
     let mut endpoint_files: Vec<String> = vec![];
-    for endpoint in &config.endpoints {
-        let endpoint_type = endpoint.endpoint_type.clone();
-        let path = endpoint.path.clone();
-        let file = format!(
-            "{}{}",
-            endpoint_type,
-            path.replace("/", "_").replace(":", ""),
-        );
-        endpoint_files.push(file);
+    for model in &config.models {
+        for endpoint in &model.endpoints {
+            let endpoint_type = endpoint.method.clone();
+            let path = endpoint.path.clone();
+            let file = format!(
+                "{}{}",
+                endpoint_type,
+                path.replace("/", "_").replace(":", ""),
+            );
+            endpoint_files.push(file);
+        }
     }
 
     let endpoint_files: Vec<&str> = endpoint_files.iter().map(|f| f.as_str()).collect();
 
-    for endpoint in &config.endpoints {
-        generate_endpoint(project_name, &endpoint, &config.database_type)
+    for model in &config.models {
+        for endpoint in &model.endpoints {
+            generate_endpoint(
+                project_name,
+                &endpoint,
+                &config.database_type,
+                model.name.as_str(),
+            )
             .expect("Failed to generate endpoint");
+        }
     }
 
-    if config.endpoints.len() > 0 {
+    if config.models.iter().any(|e| e.endpoints.len() > 0) {
         generate_module(project_name, "/src/routes", endpoint_files.clone())
             .expect("Failed to generate module");
     }
