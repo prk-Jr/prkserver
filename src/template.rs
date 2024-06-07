@@ -4,6 +4,7 @@ use crate::output::database_connection_content::*;
 use crate::output::docker_ignore_content::docker_ignore_conent;
 use crate::output::dockerfile_content::dockerfile_content;
 use crate::output::env_content::env_content;
+use crate::output::gitignore_content::git_ignore_conent;
 use crate::output::main_content::main_content;
 use crate::{generate_endpoint, generate_model, Config};
 use convert_case::Casing;
@@ -47,6 +48,7 @@ pub fn generate_project(config: &Config) -> std::io::Result<()> {
         ".dockerignore",
         &docker_ignore_conent(),
     )?;
+    create_file(&config.project_name, ".gitignore", &git_ignore_conent())?;
     create_file(
         &config.project_name,
         "compose.yaml",
@@ -90,7 +92,7 @@ pub fn create_router(config: &Config) -> String {
             }
 
             router.push_str(&format!(
-                "    .route(\"{}\",{})\n",
+                "    .route(\"{}\",{})\n\t",
                 endpoint.path, functions2
             ));
         }
