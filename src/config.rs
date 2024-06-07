@@ -2,7 +2,7 @@ use std::fs;
 
 use serde::Deserialize;
 
-use crate::Model;
+use crate::{Middleware, Model};
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -10,6 +10,7 @@ pub struct Config {
     pub database_url: String,
     pub database_type: String,
     pub models: Vec<Model>,
+    pub middlewares: Option<Vec<Middleware>>,
 }
 pub fn read_config(path: &str) -> std::io::Result<Config> {
     let config_contents = fs::read_to_string(path)?;

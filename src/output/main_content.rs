@@ -1,4 +1,4 @@
-pub fn main_content(router: String) -> String {
+pub fn main_content(router: String, extra_imports: String) -> String {
     format!(
         r#"
     use axum::Router;
@@ -12,6 +12,8 @@ pub fn main_content(router: String) -> String {
     use routes::*;
 
     mod models;
+
+    {}
     
     
     #[tokio::main]
@@ -29,6 +31,6 @@ pub fn main_content(router: String) -> String {
         axum::serve(listener, app).await.unwrap();
     }}
         "#,
-        router
+        extra_imports, router
     )
 }

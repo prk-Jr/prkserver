@@ -6,7 +6,7 @@ use crate::output::dockerfile_content::dockerfile_content;
 use crate::output::env_content::env_content;
 use crate::output::gitignore_content::git_ignore_conent;
 use crate::output::main_content::main_content;
-use crate::{generate_endpoint, generate_model, Config};
+use crate::{generate_endpoint, generate_middleware, generate_model, Config};
 use convert_case::Casing;
 use std::fs;
 
@@ -23,10 +23,14 @@ pub fn generate_project(config: &Config) -> std::io::Result<()> {
         "Cargo.toml",
         &cargo_toml_content(&config.project_name, &config.database_type),
     )?;
+    let middleware = match &config.middlewares {
+        Some(_) => format!("pub mod middlewares;\npub use middlewares::*;\n"),
+        None => String::new(),
+    };
     create_file(
         &config.project_name,
         "src/main.rs",
-        &main_content(create_router(&config)),
+        &main_content(create_router(&config), middleware),
     )?;
     create_file(
         &config.project_name,
@@ -144,6 +148,25 @@ pub fn modify_files(project_name: &str, config: &Config) -> std::io::Result<()> 
         generate_module(project_name, "/src/routes", endpoint_files.clone())
             .expect("Failed to generate module");
     }
+
+    if let Some(middlewares) = &config.middlewares {
+        for middleware in middlewares {
+            generate_middleware(project_name, &config.database_type, middleware)
+                .expect("Failed to generate middlewre");
+        }
+        let mut middleware_names: Vec<String> = vec![];
+        for middleware in middlewares {
+            let file = format!("{}_middleware", middleware.model,);
+            middleware_names.push(file);
+        }
+        let middleware_names: Vec<&str> = middleware_names.iter().map(|f| f.as_str()).collect();
+
+        if config.models.len() > 0 {
+            generate_module(project_name, "/src/middlewares", middleware_names.clone())
+                .expect("Failed to generate module");
+        }
+    }
+
     // generate_module(project_name, "/src", vec!["models", "routes"])
     //     .expect("Failed to generate root module");
 

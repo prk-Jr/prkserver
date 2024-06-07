@@ -12,6 +12,9 @@ use template::*;
 
 mod output;
 
+mod middleware;
+use middleware::*;
+
 fn main() {
     // let matches = Command::new("prkserver")
     //     .version("1.0")

@@ -7,7 +7,7 @@
 - Generates a Rust backend project using Axum for HTTP handling.
 - Configures SQLx for database interactions.
 - Supports PostgreSQL and MySQL databases.
-- Creates models and endpoints as specified in the `config.toml` file.
+- Creates models, middlewares and endpoints as specified in the `config.toml` file.
 
 ## Installation
 
@@ -33,10 +33,14 @@ fields = [
     { name = "id", type = "i32" },
     { name = "username", type = "String" },
     { name = "email", type = "String" },
+    { name = "user_token", type = "String" },
 ]
 endpoints = [
     { method = "GET", path = "/users" },
-    { method = "POST", path = "/users" },
+    { method = "POST", path = "/users", body_params = [
+        { name = "username", type = "String" },
+        { name = "email", type = "String" },
+    ] },
 ]
 
 
@@ -49,9 +53,25 @@ fields = [
     { name = "description", type = "Option<String>" },
 ]
 endpoints = [
-    { method = "GET", path = "/todos" },
-    { method = "GET", path = "/todos/:id" },
+    { method = "GET", path = "/todos", middlewares = [
+        "UserMiddleware",
+    ],  },
+    { method = "POST", path = "/todos", middlewares = [
+        "UserMiddleware",
+    ], body_params = [
+        { name = "task", type = "String" },
+        { name = "description", type = "Option<String>" },
+    ]  },
+    { method = "GET", path = "/todos/:id", path_params = [
+        { name = "id", type = "i32" },
+    ] },
 ]
+
+[[middlewares]]
+model = "User"
+select_from_model = "User"
+validate_header = [{ model_field = "user_token", header_key = "token" }]
+
 ```
 
 Once you have your config.toml file, run prkserver at the path of this config file:
