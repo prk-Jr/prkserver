@@ -11,7 +11,7 @@ axum = "0.7.5"
 dotenvy = "0.15.7"
 tokio = {{ version = "1.38.0", features = ["rt-multi-thread"] }}
 sqlx = {{ version = "0.7.4", features = ["runtime-tokio-rustls", "{}"] }}
-prkorm = "0.5.3"
+prkorm = "0.5.4"
 serde = {{ version = "1.0", features = ["derive"] }}
 toml = "0.8.14"
 env_logger = "0.11.3"
