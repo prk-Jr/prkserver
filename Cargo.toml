@@ -1,6 +1,6 @@
 [package]
 name = "prkserver"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 keywords = ["database", "orm", "mysql", "axum", "server"]
 categories = ["database", "web", "web-programming::http-server"]
