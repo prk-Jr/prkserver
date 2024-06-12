@@ -126,7 +126,9 @@ pub fn generate_endpoint(
             extraction_builder.push_str(
                 format!(
                     "{}Middleware({}): {}Middleware, ",
-                    middleware, middleware, middleware
+                    middleware,
+                    middleware.to_lowercase(),
+                    middleware
                 )
                 .as_str(),
             );

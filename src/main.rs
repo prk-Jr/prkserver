@@ -27,7 +27,10 @@ fn main() {
     let config: Config = read_config("./config.toml").expect("Failed to read config.toml");
 
     match generate_project(&config) {
-        Ok(_) => println!("Project '{}' created successfully.", config.project_name),
+        Ok(_) => println!(
+            "Project '{}' created successfully. \n\ncd {}\ngit init\n ",
+            config.project_name, config.project_name
+        ),
         Err(e) => eprintln!("Error creating project: {}", e),
     }
 }
