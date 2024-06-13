@@ -6,8 +6,8 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 pub struct Middleware {
     pub model: String,
-    pub select_from_model: String,
-    pub validate_header: Vec<ValidaHeader>,
+    select_from_model: String,
+    validate_header: Vec<ValidaHeader>,
 }
 
 #[derive(Deserialize)]
@@ -46,15 +46,13 @@ pub fn generate_middleware(
 }};\n
 use serde::{{Deserialize, Serialize}};\n
 use sqlx::*;\n
-use crate::models::{}::*;\n\n
+use crate::models::*;\n\n
 
 #[derive(sqlx::FromRow, Serialize, Deserialize)]
 pub struct {}Middleware(pub {});
 
 ",
-        &middleware.model.to_lowercase(),
-        &middleware.model,
-        &middleware.model,
+        &middleware.model, &middleware.model,
     ));
 
     model_content.push_str(&format!(

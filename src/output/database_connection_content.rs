@@ -30,7 +30,6 @@ pub fn database_connection_content(database_type: &str) -> String {
             dotenv().ok();
             let database_url = &env::var("DATABASE_URL").expect("Env var unavailable");
         
-            println!("databse {{database_url}}");
             {}Pool::connect(&database_url).await
         }}
         "#,

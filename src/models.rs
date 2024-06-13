@@ -22,7 +22,11 @@ pub struct Model {
 
 pub fn generate_model(project_name: &str, model: &Model) -> std::io::Result<()> {
     let model_dir = format!("./{}/src/models", project_name);
-    let model_path = format!("{}/{}.rs", model_dir, model.name.to_lowercase());
+    let model_path = format!(
+        "{}/{}.rs",
+        model_dir,
+        model.name.to_case(Case::Snake).to_lowercase()
+    );
     let mut model_content = String::new();
     model_content.push_str(&format!(
         "use prkorm::Table;\n
