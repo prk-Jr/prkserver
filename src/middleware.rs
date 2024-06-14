@@ -35,7 +35,7 @@ pub fn generate_middleware(
     let model_path = format!(
         "{}/{}_middleware.rs",
         model_dir,
-        middleware.model.to_lowercase()
+        middleware.model.to_case(Case::Snake).to_lowercase()
     );
     let mut model_content = String::new();
     model_content.push_str(&format!(
@@ -59,7 +59,7 @@ pub struct {}Middleware(pub {});
         "
     
 #[async_trait]
-impl<S> FromRequestParts<S> for UserMiddleware
+impl<S> FromRequestParts<S> for {}Middleware
 where
     MySqlPool: FromRef<S>,
     S: Send + Sync,
@@ -67,7 +67,8 @@ where
     type Rejection = (StatusCode, String);
 
     async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {{
-     "
+     ",
+        &middleware.model
     ));
     model_content.push_str(&format!(
         " let pool = {}Pool::from_ref(state);\n",

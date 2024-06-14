@@ -70,10 +70,10 @@ pub fn generate_endpoint(
 
     if let Some(middlewares) = &endpoint.middlewares {
         for middleware in middlewares {
-            let middleware = middleware.to_lowercase().replace("middleware", "");
+            let middleware = middleware.to_case(Case::Snake).replace("middleware", "");
 
             endpoint_content.push_str(&format!(
-                "use crate::middlewares::{}_middleware::*;\n",
+                "use crate::middlewares::{}middleware::*;\n",
                 middleware
             ));
         }
@@ -125,9 +125,8 @@ pub fn generate_endpoint(
     if let Some(middlewares) = &endpoint.middlewares {
         for middleware in middlewares {
             let middleware = middleware
-                .to_lowercase()
-                .replace("middleware", "")
-                .to_case(Case::UpperCamel);
+                .to_case(Case::UpperCamel)
+                .replace("Middleware", "");
 
             extraction_builder.push_str(
                 format!(
