@@ -20,8 +20,16 @@ pub fn generate_endpoint(
     endpoint: &Endpoint,
     database_type: &str,
     model_name: &str,
+    example: bool,
 ) -> std::io::Result<()> {
-    let endpoint_dir = format!("./{}/src/routes", project_name);
+    if endpoint.method.to_lowercase() != "get" && example {
+        return Ok(());
+    }
+    let endpoint_dir = if example {
+        format!("./{}/src/routes/example", project_name)
+    } else {
+        format!("./{}/src/routes", project_name)
+    };
 
     let database_type = match database_type
         .to_string()
@@ -73,8 +81,7 @@ pub fn generate_endpoint(
 
     if let Some(body) = &endpoint.body_params {
         endpoint_content.push_str(&format!(
-            "
-        use serde::{{Deserialize, Serialize}};\n
+            "use serde::{{Deserialize, Serialize}};\n
             ",
         ));
         endpoint_content.push_str(&format!("#[derive(Deserialize)]\n"));
@@ -87,8 +94,7 @@ pub fn generate_endpoint(
     }
     if let Some(path) = &endpoint.path_params {
         endpoint_content.push_str(&format!(
-            "
-        use serde::{{Deserialize, Serialize}};\n
+            "use serde::{{Deserialize, Serialize}};\n
             ",
         ));
         endpoint_content.push_str(&format!("#[derive(Deserialize)]\n"));
@@ -134,9 +140,9 @@ pub fn generate_endpoint(
             );
         }
     }
-    if endpoint.method.to_lowercase() == "get" {
+    if endpoint.method.to_lowercase() == "get" && example {
         endpoint_content.push_str(&format!(
-            "pub async fn get_all{}(State(db): State<{}Pool>,) -> impl IntoResponse {{\n
+            "pub async fn get_all{}(State(db): State<{}Pool>, {}) -> impl IntoResponse {{\n
             let query = {}::select().build();
 
             let db_response : Result<Vec<{}>, Error> = sqlx::query_as(&query)
@@ -154,24 +160,26 @@ pub fn generate_endpoint(
                 .replace("/", "_")
                 .replace(":", ""),
             database_type,
+            extraction_builder,
             model_name,
             model_name
         ));
     }
-
-    endpoint_content.push_str(&format!(
-        "pub async fn {}{}(State(db): State<{}Pool>, {}) -> impl IntoResponse {{\n",
-        endpoint.method.to_lowercase(),
-        endpoint
-            .path
-            .to_lowercase()
-            .replace("/", "_")
-            .replace(":", ""),
-        database_type,
-        extraction_builder,
-    ));
-    endpoint_content.push_str("    // TODO: Implement endpoint logic\n");
-    endpoint_content.push_str("}\n");
+    if !example {
+        endpoint_content.push_str(&format!(
+            "pub async fn {}{}(State(db): State<{}Pool>, {}) -> impl IntoResponse {{\n",
+            endpoint.method.to_lowercase(),
+            endpoint
+                .path
+                .to_lowercase()
+                .replace("/", "_")
+                .replace(":", ""),
+            database_type,
+            extraction_builder,
+        ));
+        endpoint_content.push_str("    // TODO: Implement endpoint logic\n");
+        endpoint_content.push_str("}\n");
+    }
     fs::create_dir_all(endpoint_dir).expect("Failed to create model dir");
 
     fs::write(endpoint_path, endpoint_content)?;

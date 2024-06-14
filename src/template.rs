@@ -117,6 +117,7 @@ pub fn modify_files(project_name: &str, config: &Config) -> std::io::Result<()> 
     }
 
     let mut endpoint_files: Vec<String> = vec![];
+    let mut example_endpoint_files: Vec<String> = vec![];
     for model in &config.models {
         for endpoint in &model.endpoints {
             let endpoint_type = endpoint.method.clone();
@@ -126,11 +127,16 @@ pub fn modify_files(project_name: &str, config: &Config) -> std::io::Result<()> 
                 endpoint_type,
                 path.replace("/", "_").replace(":", ""),
             );
-            endpoint_files.push(file);
+            endpoint_files.push(file.clone());
+            if endpoint.method.to_lowercase() == "get" {
+                example_endpoint_files.push(file);
+            }
         }
     }
 
     let endpoint_files: Vec<&str> = endpoint_files.iter().map(|f| f.as_str()).collect();
+    let example_endpoint_files: Vec<&str> =
+        example_endpoint_files.iter().map(|f| f.as_str()).collect();
 
     for model in &config.models {
         for endpoint in &model.endpoints {
@@ -139,14 +145,37 @@ pub fn modify_files(project_name: &str, config: &Config) -> std::io::Result<()> 
                 &endpoint,
                 &config.database_type,
                 model.name.as_str(),
+                false,
             )
             .expect("Failed to generate endpoint");
+            if endpoint.method.to_lowercase() == "get" {
+                generate_endpoint(
+                    project_name,
+                    &endpoint,
+                    &config.database_type,
+                    model.name.as_str(),
+                    true,
+                )
+                .expect("Failed to generate endpoint");
+            }
         }
     }
 
     if config.models.iter().any(|e| e.endpoints.len() > 0) {
-        generate_module(project_name, "/src/routes", endpoint_files.clone())
-            .expect("Failed to generate module");
+        let mut ep = endpoint_files.clone();
+        if example_endpoint_files.len() > 0 {
+            ep.push("example");
+        }
+        generate_module(project_name, "/src/routes", ep).expect("Failed to generate module");
+    }
+
+    if example_endpoint_files.len() > 0 {
+        generate_module(
+            project_name,
+            "/src/routes/example",
+            example_endpoint_files.clone(),
+        )
+        .expect("Failed to generate module");
     }
 
     if let Some(middlewares) = &config.middlewares {
