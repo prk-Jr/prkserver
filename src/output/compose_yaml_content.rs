@@ -1,7 +1,7 @@
 use convert_case::{Case, Casing};
 
 pub fn compose_yaml_content(database_type: &str) -> String {
-    let pool_options = database_type.to_case(Case::UpperCamel);
+    let pool_options = database_type.to_case(Case::Upper);
 
     format!(
         r#"

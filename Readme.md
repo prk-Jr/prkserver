@@ -54,10 +54,10 @@ fields = [
 ]
 endpoints = [
     { method = "GET", path = "/todos", middlewares = [
-        "UserMiddleware",
+        "UserLoginHistoryMiddleware",
     ],  },
     { method = "POST", path = "/todos", middlewares = [
-        "UserMiddleware",
+        "UserLoginHistoryMiddleware",
     ], body_params = [
         { name = "task", type = "String" },
         { name = "description", type = "Option<String>" },
@@ -67,10 +67,19 @@ endpoints = [
     ] },
 ]
 
+[[models]]
+name = "UserLoginHistory"
+table_name = "user_login_history"
+fields = [
+    { name = "id", type = "i32" },
+    { name = "task", type = "String" },
+    { name = "description", type = "Option<String>" },
+]
+
 [[middlewares]]
-model = "User"
-select_from_model = "User"
-validate_header = [{ model_field = "user_token", header_key = "token" }]
+model = "UserLoginHistory"
+select_from_model = "UserLoginHistory"
+validate_header = [{ model_field = "token", header_key = "token" }]
 
 ```
 

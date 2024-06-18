@@ -6,6 +6,7 @@ use crate::{Middleware, Model};
 
 #[derive(Deserialize)]
 pub struct Config {
+    // pub authorization: bool,
     pub project_name: String,
     pub database_url: String,
     pub database_type: String,

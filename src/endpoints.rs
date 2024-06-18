@@ -68,14 +68,25 @@ pub fn generate_endpoint(
 
     let mut extraction_builder = String::new();
 
+    if let Some(_) = &endpoint.middlewares {
+        endpoint_content.push_str(&format!("use crate::middlewares::*;\n",));
+    }
+
     if let Some(middlewares) = &endpoint.middlewares {
         for middleware in middlewares {
-            let middleware = middleware.to_case(Case::Snake).replace("middleware", "");
+            let middleware = middleware
+                .to_case(Case::UpperCamel)
+                .replace("Middleware", "");
 
-            endpoint_content.push_str(&format!(
-                "use crate::middlewares::{}middleware::*;\n",
-                middleware
-            ));
+            extraction_builder.push_str(
+                format!(
+                    "{}Middleware({}): {}Middleware, ",
+                    middleware,
+                    middleware.to_lowercase(),
+                    middleware
+                )
+                .as_str(),
+            );
         }
     }
 
@@ -122,23 +133,6 @@ pub fn generate_endpoint(
             .push_str(format!("Query(query_params): Query<{}QueryParams>, ", model_name).as_str());
     }
 
-    if let Some(middlewares) = &endpoint.middlewares {
-        for middleware in middlewares {
-            let middleware = middleware
-                .to_case(Case::UpperCamel)
-                .replace("Middleware", "");
-
-            extraction_builder.push_str(
-                format!(
-                    "{}Middleware({}): {}Middleware, ",
-                    middleware,
-                    middleware.to_lowercase(),
-                    middleware
-                )
-                .as_str(),
-            );
-        }
-    }
     if endpoint.method.to_lowercase() == "get" && example {
         endpoint_content.push_str(&format!(
             "pub async fn get_all{}(State(db): State<{}Pool>, {}) -> impl IntoResponse {{\n

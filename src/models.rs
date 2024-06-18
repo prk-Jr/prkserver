@@ -17,7 +17,7 @@ pub struct Model {
     pub name: String,
     pub table_name: String,
     pub fields: Vec<Field>,
-    pub endpoints: Vec<Endpoint>,
+    pub endpoints: Option<Vec<Endpoint>>,
 }
 
 pub fn generate_model(project_name: &str, model: &Model) -> std::io::Result<()> {

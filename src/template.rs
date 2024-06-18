@@ -21,12 +21,19 @@ pub fn generate_project(config: &Config) -> std::io::Result<()> {
     create_file(
         &config.project_name,
         "Cargo.toml",
-        &cargo_toml_content(&config.project_name, &config.database_type),
+        &cargo_toml_content(
+            &config.project_name,
+            &config.database_type,
+            false, /* config.authorization */
+        ),
     )?;
     let middleware = match &config.middlewares {
         Some(_) => format!("pub mod middlewares;\npub use middlewares::*;\n"),
         None => String::new(),
     };
+    // if config.authorization {
+    //     middleware.push_str("pub mod authorization;\npub use authorization::*;\n")
+    // }
     create_file(
         &config.project_name,
         "src/main.rs",
@@ -68,37 +75,44 @@ pub fn create_router(config: &Config) -> String {
     let mut router = String::from("Router::new()\n");
 
     for models in &config.models {
-        for endpoint in &models.endpoints {
-            let functions1 = format!(
-                "get({}{})",
-                "get_all",
-                &endpoint
-                    .path
-                    .to_lowercase()
-                    .replace("/", "_")
-                    .replace(":", ""),
-            );
-            let functions2 = format!(
-                "{}({}{})",
-                &endpoint.method.to_lowercase(),
-                endpoint.method.to_lowercase(),
-                &endpoint
-                    .path
-                    .to_lowercase()
-                    .replace("/", "_")
-                    .replace(":", ""),
-            );
-            if endpoint.method.to_lowercase() == "get" {
+        if let Some(endpoints) = &models.endpoints {
+            for endpoint in endpoints {
+                let functions1 = format!(
+                    "get({}{})",
+                    "get_all",
+                    &endpoint
+                        .path
+                        .to_lowercase()
+                        .replace("/", "_")
+                        .replace(":", ""),
+                );
+                let functions2 = format!(
+                    "{}({}{})",
+                    &endpoint.method.to_lowercase(),
+                    endpoint.method.to_lowercase(),
+                    &endpoint
+                        .path
+                        .to_lowercase()
+                        .replace("/", "_")
+                        .replace(":", ""),
+                );
+                if endpoint.method.to_lowercase() == "get" {
+                    router.push_str(&format!(
+                        "    .route(\"{}/all\",{})\n",
+                        endpoint.path, functions1
+                    ));
+                }
+                // if config.authorization {
+                //     router.push_str(&format!(
+                //         "    .route(\"{}\",{})\n\t",
+                //         "/auth", "post(authorize)"
+                //     ));
+                // }
                 router.push_str(&format!(
-                    "    .route(\"{}/all\",{})\n",
-                    endpoint.path, functions1
+                    "    .route(\"{}\",{})\n\t",
+                    endpoint.path, functions2
                 ));
             }
-
-            router.push_str(&format!(
-                "    .route(\"{}\",{})\n\t",
-                endpoint.path, functions2
-            ));
         }
     }
     router
@@ -111,6 +125,14 @@ pub fn modify_files(project_name: &str, config: &Config) -> std::io::Result<()> 
     }
 
     let models_names: Vec<&str> = config.models.iter().map(|m| m.name.as_str()).collect();
+    // if config.authorization {
+    //     generate_module(
+    //         project_name,
+    //         "/src/authorization",
+    //         vec!["auth", "claims", "init"],
+    //     )
+    //     .expect("Failed to generate module");
+    // }
     if config.models.len() > 0 {
         generate_module(project_name, "/src/models", models_names.clone())
             .expect("Failed to generate module");
@@ -119,17 +141,19 @@ pub fn modify_files(project_name: &str, config: &Config) -> std::io::Result<()> 
     let mut endpoint_files: Vec<String> = vec![];
     let mut example_endpoint_files: Vec<String> = vec![];
     for model in &config.models {
-        for endpoint in &model.endpoints {
-            let endpoint_type = endpoint.method.clone();
-            let path = endpoint.path.clone();
-            let file = format!(
-                "{}{}",
-                endpoint_type,
-                path.replace("/", "_").replace(":", ""),
-            );
-            endpoint_files.push(file.clone());
-            if endpoint.method.to_lowercase() == "get" {
-                example_endpoint_files.push(file);
+        if let Some(endpoints) = &model.endpoints {
+            for endpoint in endpoints {
+                let endpoint_type = endpoint.method.clone();
+                let path = endpoint.path.clone();
+                let file = format!(
+                    "{}{}",
+                    endpoint_type,
+                    path.replace("/", "_").replace(":", ""),
+                );
+                endpoint_files.push(file.clone());
+                if endpoint.method.to_lowercase() == "get" {
+                    example_endpoint_files.push(file);
+                }
             }
         }
     }
@@ -139,29 +163,35 @@ pub fn modify_files(project_name: &str, config: &Config) -> std::io::Result<()> 
         example_endpoint_files.iter().map(|f| f.as_str()).collect();
 
     for model in &config.models {
-        for endpoint in &model.endpoints {
-            generate_endpoint(
-                project_name,
-                &endpoint,
-                &config.database_type,
-                model.name.as_str(),
-                false,
-            )
-            .expect("Failed to generate endpoint");
-            if endpoint.method.to_lowercase() == "get" {
+        if let Some(endpoints) = &model.endpoints {
+            for endpoint in endpoints {
                 generate_endpoint(
                     project_name,
                     &endpoint,
                     &config.database_type,
                     model.name.as_str(),
-                    true,
+                    false,
                 )
                 .expect("Failed to generate endpoint");
+                if endpoint.method.to_lowercase() == "get" {
+                    generate_endpoint(
+                        project_name,
+                        &endpoint,
+                        &config.database_type,
+                        model.name.as_str(),
+                        true,
+                    )
+                    .expect("Failed to generate endpoint");
+                }
             }
         }
     }
 
-    if config.models.iter().any(|e| e.endpoints.len() > 0) {
+    if config
+        .models
+        .iter()
+        .any(|e| e.endpoints.is_some() && e.endpoints.as_ref().unwrap().len() > 0)
+    {
         let mut ep = endpoint_files.clone();
         if example_endpoint_files.len() > 0 {
             ep.push("example");
