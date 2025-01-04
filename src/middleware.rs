@@ -59,14 +59,15 @@ pub struct {}Middleware(pub {});
     
 impl<S> FromRequestParts<S> for {}Middleware
 where
-    MySqlPool: FromRef<S>,
+    {}Pool: FromRef<S>,
     S: Send + Sync,
 {{
     type Rejection = (StatusCode, String);
 
     async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {{
      ",
-        &middleware.model
+        &middleware.model,
+        &database_type,
     ));
     model_content.push_str(&format!(
         " let pool = {}Pool::from_ref(state);\n",

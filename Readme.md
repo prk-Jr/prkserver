@@ -24,7 +24,7 @@ To use `prkserver`, create a `config.toml` file that defines the project configu
 ```toml
 project_name = "backend_project"
 database_url = "mysql://user:password@localhost/database_name"
-database_type = "mysql"
+database_type = "mysql" # postgres, mysql, sqlite
 
 [[models]]
 name = "User"

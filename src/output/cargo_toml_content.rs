@@ -10,7 +10,7 @@ edition = "2021"
 axum = "0.8.1"
 dotenvy = "0.15.7"
 tokio = {{ version = "1.38.0", features = ["rt-multi-thread"] }}
-sqlx = {{ version = "0.7.4", features = ["runtime-tokio-rustls", "{}"] }}
+sqlx = {{ version = "0.8.3", features = ["runtime-tokio-rustls", "{}"] }}
 prkorm = "0.5.4"
 serde = {{ version = "1.0", features = ["derive"] }}
 {}
