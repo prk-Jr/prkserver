@@ -40,7 +40,6 @@ pub fn generate_middleware(
     let mut model_content = String::new();
     model_content.push_str(&format!(
         "use axum::{{
-    async_trait,
     extract::{{FromRef, FromRequestParts}},
     http::{{request::Parts, StatusCode}},
 }};\n
@@ -58,7 +57,6 @@ pub struct {}Middleware(pub {});
     model_content.push_str(&format!(
         "
     
-#[async_trait]
 impl<S> FromRequestParts<S> for {}Middleware
 where
     MySqlPool: FromRef<S>,

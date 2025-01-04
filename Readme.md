@@ -55,7 +55,7 @@ fields = [
 endpoints = [
     { method = "GET", path = "/todos", middlewares = [
         "UserLoginHistoryMiddleware",
-    ],  },
+    ]  },
     { method = "POST", path = "/todos", middlewares = [
         "UserLoginHistoryMiddleware",
     ], body_params = [
@@ -71,9 +71,8 @@ endpoints = [
 name = "UserLoginHistory"
 table_name = "user_login_history"
 fields = [
-    { name = "id", type = "i32" },
-    { name = "task", type = "String" },
-    { name = "description", type = "Option<String>" },
+    { name = "user_id", type = "i32" },
+    { name = "token", type = "String" },
 ]
 
 [[middlewares]]

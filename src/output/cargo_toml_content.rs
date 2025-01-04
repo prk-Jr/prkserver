@@ -7,7 +7,7 @@ version = "0.1.0"
 edition = "2021"
     
 [dependencies]
-axum = "0.7.5"
+axum = "0.8.1"
 dotenvy = "0.15.7"
 tokio = {{ version = "1.38.0", features = ["rt-multi-thread"] }}
 sqlx = {{ version = "0.7.4", features = ["runtime-tokio-rustls", "{}"] }}
