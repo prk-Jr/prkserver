@@ -243,13 +243,13 @@ pub fn generate_module(project_name: &str, dir_name: &str, name: Vec<&str>) -> s
     for field in &name {
         model_content.push_str(&format!(
             "pub mod {};\n",
-            field.to_case(convert_case::Case::Snake).replace("{", "_by_").replace("}", "")
+            field.to_case(convert_case::Case::Snake).replace("{", "by_").replace("}", "")
         ));
     }
     for field in name {
         model_content.push_str(&format!(
             "pub use {}::*;\n",
-            field.to_case(convert_case::Case::Snake).replace("{", "_by_").replace("}", "")
+            field.to_case(convert_case::Case::Snake).replace("{", "by_").replace("}", "")
         ));
     }
     fs::create_dir_all(module_dir).expect("Failed to create model dir");
