@@ -31,7 +31,7 @@ fn main() {
 
     match generate_project(&config) {
         Ok(_) => println!(
-            "Project '{}' created successfully. \n\ncd {}\ngit init\n ",
+            "Project '{}' created successfully. \n\ncd {}\ngit init\ncargo fmt",
             config.project_name, config.project_name
         ),
         Err(e) => eprintln!("Error creating project: {}", e),
