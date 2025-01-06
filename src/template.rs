@@ -152,7 +152,7 @@ pub fn modify_files(project_name: &str, config: &Config) -> std::io::Result<()> 
                 let file = format!(
                     "{}{}",
                     endpoint_type,
-                    path.replace("/", "_").replace(":", ""),
+                    path.replace("/", "_").replace(":", "").replace("{", "_").replace("}", "")
                 );
                 endpoint_files.push(file.clone());
                 if endpoint.method.to_lowercase() == "get" {

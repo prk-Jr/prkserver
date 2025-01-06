@@ -48,8 +48,7 @@ pub fn generate_endpoint(
         endpoint
             .path
             .to_lowercase()
-            .replace("/", "_")
-            .replace(":", "")
+            .replace("/", "_").replace(":", "").replace("{", "_").replace("}", "")
     );
 
     let mut endpoint_content = String::new();
@@ -150,8 +149,7 @@ pub fn generate_endpoint(
             endpoint
                 .path
                 .to_lowercase()
-                .replace("/", "_")
-                .replace(":", ""),
+                .replace("/", "_").replace(":", "").replace("{", "_").replace("}", ""),
             database_type,
             extraction_builder,
             model_name,
@@ -165,8 +163,7 @@ pub fn generate_endpoint(
             endpoint
                 .path
                 .to_lowercase()
-                .replace("/", "_")
-                .replace(":", ""),
+                .replace("/", "_").replace(":", "").replace("{", "_").replace("}", ""),
             database_type,
             extraction_builder,
         ));
