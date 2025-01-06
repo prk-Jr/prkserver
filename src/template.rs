@@ -11,7 +11,7 @@ use convert_case::Casing;
 use std::fs;
 
 fn create_file(project_name: &str, file_path: &str, content: &str) -> std::io::Result<()> {
-    let path = format!("{}/{}", project_name, file_path.replace("{", "_").replace("}", "_"));
+    let path = format!("{}/{}", project_name, file_path.replace("{", "_").replace("}", ""));
     fs::write(path, content)
 }
 
@@ -86,7 +86,7 @@ pub fn create_router(config: &Config) -> String {
                         .replace("/", "_")
                         .replace(":", "")
                         .replace("{", "_")
-                        .replace("}", "_"),
+                        .replace("}", ""),
                 );
                 let functions2 = format!(
                     "{}({}{})",
@@ -98,7 +98,7 @@ pub fn create_router(config: &Config) -> String {
                         .replace("/", "_")
                         .replace(":", "")
                         .replace("{", "_")
-                        .replace("}", "_"),
+                        .replace("}", ""),
                 );
                 if endpoint.method.to_lowercase() == "get" {
                     router.push_str(&format!(
@@ -152,7 +152,7 @@ pub fn modify_files(project_name: &str, config: &Config) -> std::io::Result<()> 
                 let file = format!(
                     "{}{}",
                     endpoint_type,
-                    path.replace("/", "_").replace(":", "").replace("{", "_").replace("}", "_")
+                    path.replace("/", "_").replace(":", "").replace("{", "_").replace("}", "")
                 );
                 endpoint_files.push(file.clone());
                 if endpoint.method.to_lowercase() == "get" {
@@ -243,13 +243,13 @@ pub fn generate_module(project_name: &str, dir_name: &str, name: Vec<&str>) -> s
     for field in &name {
         model_content.push_str(&format!(
             "pub mod {};\n",
-            field.to_case(convert_case::Case::Snake).replace("{", "_").replace("}", "_")
+            field.to_case(convert_case::Case::Snake).replace("{", "_").replace("}", "")
         ));
     }
     for field in name {
         model_content.push_str(&format!(
             "pub use {}::*;\n",
-            field.to_case(convert_case::Case::Snake).replace("{", "_").replace("}", "_")
+            field.to_case(convert_case::Case::Snake).replace("{", "_").replace("}", "")
         ));
     }
     fs::create_dir_all(module_dir).expect("Failed to create model dir");
