@@ -13,6 +13,10 @@ tokio = {{ version = "1.38.0", features = ["rt-multi-thread"] }}
 sqlx = {{ version = "0.8.3", features = ["runtime-tokio-rustls", "{}"] }}
 prkorm = "0.5.4"
 serde = {{ version = "1.0", features = ["derive"] }}
+tower-http = {{ version = "0.5.2", features = ["trace", "cors"] }}
+tower-layer = "0.3.2"
+tracing = "0.1.40"
+tracing-subscriber = "0.3"
 {}
         "#,
         project_name,

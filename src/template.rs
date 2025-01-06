@@ -84,7 +84,9 @@ pub fn create_router(config: &Config) -> String {
                         .path
                         .to_lowercase()
                         .replace("/", "_")
-                        .replace(":", ""),
+                        .replace(":", "")
+                        .replace("{", "_")
+                        .replace("}", "_"),
                 );
                 let functions2 = format!(
                     "{}({}{})",
@@ -94,7 +96,9 @@ pub fn create_router(config: &Config) -> String {
                         .path
                         .to_lowercase()
                         .replace("/", "_")
-                        .replace(":", ""),
+                        .replace(":", "")
+                        .replace("{", "_")
+                        .replace("}", "_"),
                 );
                 if endpoint.method.to_lowercase() == "get" {
                     router.push_str(&format!(

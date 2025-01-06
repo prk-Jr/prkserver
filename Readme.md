@@ -33,7 +33,6 @@ fields = [
     { name = "id", type = "i32" },
     { name = "username", type = "String" },
     { name = "email", type = "String" },
-    { name = "user_token", type = "String" },
 ]
 endpoints = [
     { method = "GET", path = "/users" },
@@ -62,7 +61,7 @@ endpoints = [
         { name = "task", type = "String" },
         { name = "description", type = "Option<String>" },
     ]  },
-    { method = "GET", path = "/todos/:id", path_params = [
+    { method = "GET", path = "/todos/{id}", path_params = [
         { name = "id", type = "i32" },
     ] },
 ]
