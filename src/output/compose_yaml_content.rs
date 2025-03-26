@@ -1,46 +1,26 @@
-use convert_case::{Case, Casing};
-
 pub fn compose_yaml_content(database_type: &str) -> String {
-    let pool_options = database_type.to_case(Case::Upper);
-
-    format!(
-        r#"
+    match database_type.to_lowercase().as_str() {
+        "mysql" => r#"
+version: '3.8'
 services:
-  server:
-    build:
-      context: .
-      target: final
-    ports:
-      - 80:80
-    depends_on:
-      - db_image
-    networks:
-      - common-net
-
-  db_image:
-    image: {}:latest
+  db:
+    image: mysql:8.0
     environment:
-      {}_PORT: 3306
-      {}_DATABASE: database_name
-      {}_USER: user
-      {}_PASSWORD: database_password
-      {}_ROOT_PASSWORD: strong_database_password
-    expose:
-      - 3306
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: test_db
     ports:
-      - "3307:3306"
-    networks:
-      - common-net
-
-networks:
-  common-net: {{}}
-
-        "#,
-        pool_options.to_lowercase(),
-        pool_options,
-        pool_options,
-        pool_options,
-        pool_options,
-        pool_options,
-    )
+      - "3306:3306"
+"#.to_string(),
+        _ => r#"
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: test_db
+    ports:
+      - "5432:5432"
+"#.to_string(),
+    }
 }

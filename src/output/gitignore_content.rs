@@ -1,7 +1,6 @@
-pub fn git_ignore_conent() -> String {
-    format!(
-        r#"
+pub fn git_ignore_content() -> String {
+    r#"
 /target
-    "#
-    )
+.env
+"#.to_string()
 }

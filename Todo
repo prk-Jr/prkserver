@@ -1,0 +1,231 @@
+1. Missing mod.rs and its contents in the generated app
+2. prkorm error: where_{}_eq
+3. There are functions like find_by_id, here find_by_{} depends on key in the model
+4. generate_router is empty
+5. In prkorm, no build() in update or delete, only in insert and select.
+6. All repositories and services must derive clone.
+7. Add the trace layer as per this:
+let trace_layer = tower_http::trace::TraceLayer::new_for_http().make_span_with(
+        |request: &axum::extract::Request<Body>| {
+            let uri = request.uri().to_string();
+            tracing::info_span!("http_request", method = ?request.method(), uri)
+        },
+    );
+    let user_repo = SqlxUserRepository::new(database_connection.clone());
+    let user_service = UserService::new(user_repo);
+    let app = Router::new().layer(trace_layer).with_state(user_service);
+
+8. Get rid of async_trait in the generated code and update for:
+pub trait TodoRepository: Send + Sync {
+    fn find_all(&self) -> impl Future<Output = Result<Vec<Todo>, AppError>> + Send;
+    fn find_by_id(&self, id: i32) -> impl Future<Output = Result<Option<Todo>, AppError>> + Send;
+    fn create(&self, item: Todo) -> impl Future<Output = Result<Todo, AppError>> + Send;
+    fn update(&self, item: Todo) -> impl Future<Output = Result<Todo, AppError>> + Send;
+    fn delete(&self, id: i32) -> impl Future<Output = Result<(), AppError>> + Send;
+}
+
+9. The router is missing all the routes provided in the config.toml. I want the http part be extracted like this:
+/*!
+    Module `http` exposes an HTTP server that handles HTTP requests to the application. Its
+    implementation is opaque to module consumers.
+*/
+
+use std::{net::SocketAddr, sync::Arc};
+
+use anyhow::Context;
+use axum::{
+    routing::{get, post},
+    Router,
+};
+use reqwest::StatusCode;
+use tokio::net;
+use tower_http::cors::CorsLayer;
+
+use super::handlers::create_transaction::{create_payment_link, create_transaction, get_principal};
+use crate::domain::transactions::ports::TransactionService; // Update this to your correct path // Update this to your correct path
+
+/// Configuration for the HTTP server.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HttpServerConfig<'a> {
+    pub port: &'a str,
+}
+
+#[derive(Debug, Clone)]
+/// The global application state shared between all request handlers.
+pub struct AppState<TS: TransactionService> {
+    pub transaction_service: Arc<TS>,
+}
+
+/// The application's HTTP server. The underlying HTTP package is opaque to module consumers.
+pub struct HttpServer {
+    router: axum::Router,
+    listener: net::TcpListener,
+}
+
+impl HttpServer {
+    /// Returns a new HTTP server bound to the port specified in `config`.
+    pub async fn new(
+        transaction_service: impl TransactionService,
+        config: HttpServerConfig<'_>,
+    ) -> anyhow::Result<Self> {
+        let trace_layer = tower_http::trace::TraceLayer::new_for_http().make_span_with(
+            |request: &axum::extract::Request<_>| {
+                let uri = request.uri().to_string();
+                tracing::info_span!("http_request", method = ?request.method(), uri)
+            },
+        );
+
+        // Construct dependencies to inject into handlers.
+        let state = AppState {
+            transaction_service: Arc::new(transaction_service),
+        };
+
+        // let cors = CorsLayer::new()
+        //     // allow `GET` and `POST` when accessing the resource
+        //     .allow_methods([Method::GET, Method::POST])
+        //     // allow requests from any origin
+        //     .allow_origin(Any);
+
+        let router = axum::Router::new()
+            .route("/health", get(health_route))
+            .nest("/api", api_routes())
+            // .layer(cors)
+            .layer(CorsLayer::permissive())
+            .layer(trace_layer)
+            .with_state(state);
+
+        tracing::info!("Config on {:?}", config);
+
+        let addr = SocketAddr::from((
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            config.port.parse::<u16>().unwrap_or(50051),
+        ));
+        // let addr =format!("0.0.0.0:{}", config.port);
+
+        let listener = net::TcpListener::bind(&addr)
+            .await
+            .with_context(|| format!("failed to listen on port {}", config.port))?;
+
+        Ok(Self { router, listener })
+    }
+
+    /// Runs the HTTP server.
+    pub async fn run(self) -> anyhow::Result<()> {
+        tracing::debug!("listening on {}", self.listener.local_addr().unwrap());
+        axum::serve(self.listener, self.router)
+            .await
+            .context("received error from running server")?;
+        Ok(())
+    }
+}
+
+fn api_routes<TS: TransactionService>() -> Router<AppState<TS>> {
+    Router::new()
+    .route("/transactions", post(create_transaction::<TS>)) // Route for creating transactions
+    .route("/payment", post(create_payment_link::<TS>)) // Route for creating transactions
+    .route("/principal", get(get_principal::<TS>)) // Route for creating transactions
+}
+
+async fn health_route() -> (StatusCode, &'static str) {
+    (StatusCode::OK, "OK")
+}
+
+10. Domain model should derive Table like this:
+#[derive(Debug, Serialize, Deserialize, Table, Default, sqlx::FromRow)]
+#[table_name("todo")]
+#[primary_key("id")]
+pub struct Todo {
+    pub id: i32,
+    pub task: String,
+    pub description: Option<String>,
+}
+
+11. Similarly, service should be like this:
+/*!
+   Module `service` provides the canonical implementation of the [TransactionService] port. All
+   transaction-domain logic is defined here.
+*/
+
+use anyhow::anyhow;
+
+use crate::{canister::backend::RazorpayPayment, domain::transactions::models::transaction::{
+    CreateTransactionError, CreateTransactionRequest, Transaction
+}};
+use crate::domain::transactions::ports::{TransactionNotifier, TransactionMetrics, TransactionRepository, TransactionService};
+
+use super::ports::PaymentService;
+
+/// Canonical implementation of the [TransactionService] port, through which the transaction domain API is
+/// consumed.
+#[derive(Debug, Clone)]
+pub struct Service<R, M, N, P>
+where
+    R: TransactionRepository,
+    M: TransactionMetrics,
+    N: TransactionNotifier,
+    P: PaymentService,
+{
+    repo: R,
+    metrics: M,
+    transaction_notifier: N,
+    payment_service: P,
+}
+
+impl<R, M, N, P> Service<R, M, N, P>
+where
+    R: TransactionRepository,
+    M: TransactionMetrics,
+    N: TransactionNotifier,
+    P: PaymentService,
+{
+    pub fn new(repo: R, metrics: M, transaction_notifier: N, payment_service: P) -> Self {
+        Self {
+            repo,
+            metrics,
+            transaction_notifier,
+            payment_service,
+        }
+    }
+}
+
+impl<R, M, N, P> TransactionService for Service<R, M, N, P>
+where
+    R: TransactionRepository,
+    M: TransactionMetrics,
+    N: TransactionNotifier,
+    P: PaymentService,
+{
+    /// Create the [Transaction] specified in `req` and trigger notifications.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [CreateTransactionError] returned by the [TransactionRepository].
+    async fn create_transaction(&self, booking_id: u64, payment: &RazorpayPayment) -> Result<Transaction, CreateTransactionError> {
+        let result = self.repo.create_transaction(booking_id, payment).await;
+        if result.is_err() {
+            self.metrics.record_transaction_creation_failure().await;
+        } else {
+            self.metrics.record_transaction_creation_success().await;
+            self.transaction_notifier
+                .transaction_created(result.as_ref().unwrap())
+                .await;
+        }
+
+        result
+    }
+
+    async fn create_payment_link(&self, req: &CreateTransactionRequest) -> Result<String, CreateTransactionError> {
+        let result = self.repo.check_if_car_available(req).await;
+        match result {
+            Ok(tx) => {
+                // total amount + 2.36 % razorpay fee and taxes
+                self.payment_service.create_payment_link(tx.total_amount * 1.0236, tx.booking_id).await.map_err(|f| CreateTransactionError::Unknown(anyhow!("Failed to generate the payment link {f}")))
+            },
+            Err(e) => Err(e),
+        }
+    }
+
+    async fn get_principal(&self) -> Result<String, CreateTransactionError> {
+        self.repo.get_principal().await
+    }
+}
