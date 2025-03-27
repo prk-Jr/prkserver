@@ -69,7 +69,7 @@ impl<F: FileSystem> ProjectGenerator for ProjectService<F> {
         self.create_file(
             &config.project_name,
             "Cargo.toml",
-            &cargo_toml_content(&config.project_name, &config.database_type, false),
+            &cargo_toml_content(&config.project_name, &config.database_type, false, &config.framework),
         ).await?;
         self.create_file(
             &config.project_name,

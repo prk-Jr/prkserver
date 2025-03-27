@@ -7,6 +7,13 @@ pub struct Config {
     pub database_type: String,
     pub models: Vec<Model>,
     pub middlewares: Option<Vec<Middleware>>,
+    pub framework: Framework,
+}
+
+#[derive(Clone, Deserialize, Debug)]
+pub enum Framework {
+    Axum,
+    ActixWeb,
 }
 
 #[derive(Deserialize, Clone)]

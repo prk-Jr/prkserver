@@ -45,7 +45,7 @@ mod infrastructure;
 async fn main() {{ 
     tracing_subscriber::fmt::init();
     let database_connection = database_connection::connect_to_database().await.expect("Could not connect to database");
-    let config = adapters::http::http::HttpServerConfig {{ port: "3000" }};
+    let config = adapters::http::http::HttpServerConfig {{ port: "3000".into() }};
 {repo_initializations}{service_initializations}
     let http_server = adapters::http::http::HttpServer::new({service_params}, config).await.expect("Failed to create HTTP server");
     http_server.run().await.expect("Failed to run HTTP server");

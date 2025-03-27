@@ -1,10 +1,10 @@
 # prkserver
 
-`prkserver` is a CLI tool that helps create a backend server in Rust using Axum and SQLx. It configures everything based on a provided `config.toml` file.
+`prkserver` is a CLI tool that helps create a backend server in Rust using Axum or Actix Web and SQLx. It configures everything based on a provided `config.toml` file.
 
 ## Features
 
-- Generates a Rust backend project using Axum for HTTP handling.
+- Generates a Rust backend project using Axum or Actix Web for HTTP handling.
 - Configures SQLx for database interactions.
 - Supports PostgreSQL and MySQL databases.
 - Creates models, middlewares and endpoints as specified in the `config.toml` file.
@@ -25,6 +25,8 @@ To use `prkserver`, create a `config.toml` file that defines the project configu
 project_name = "backend_project"
 database_url = "mysql://user:password@localhost/database_name"
 database_type = "mysql" # postgres, mysql, sqlite
+
+framework="Axum" #Axum, ActixWeb
 
 [[models]]
 name = "User"

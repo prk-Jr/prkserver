@@ -1,5 +1,7 @@
 use crate::{domain::models::config::{Config,  Middleware, Model}, output::generate_handler};
 
+use super::config::Framework;
+
 pub struct Template {
     pub config: Config,
 }
@@ -29,6 +31,14 @@ impl Template {
     }
 
     pub fn generate_router(&self) -> String {
+        match self.config.framework {
+            Framework::Axum => self.generate_axum_router(),
+            Framework::ActixWeb => self.generate_actix_router(),
+        }
+        
+    }
+
+    fn generate_axum_router(&self) -> String {
         let mut routes = String::new();
         for model in &self.config.models {
             if let Some(endpoints) = &model.endpoints {
@@ -54,93 +64,78 @@ impl Template {
         routes
     }
 
-    // pub fn generate_endpoint_content(
-    //     &self,
-    //     endpoint: &Endpoint,
-    //     model_name: &str,
-    //     _db_type: &str,
-    // ) -> String {
-    //     let handler_name = format!(
-    //         "{}{}",
-    //         endpoint.method.to_lowercase(),
-    //         endpoint.path
-    //             .replace("/", "_")
-    //             .replace(":", "")
-    //             .replace("{", "by_")
-    //             .replace("}", "")
-    //     );
-    //     let service_field = format!("{}_service", model_name.to_lowercase());
-    //     let model_lower = model_name.to_lowercase();
+    fn generate_actix_router(&self) -> String {
+        let mut routes = String::new();
+        for model in &self.config.models {
+            if let Some(endpoints) = &model.endpoints {
+                for endpoint in endpoints {
+                    let method = match endpoint.method.to_lowercase().as_str() {
+                        "get" => "web::get",
+                        "post" => "web::post",
+                        "put" => "web::put",
+                        "delete" => "web::delete",
+                        _ => "web::route",
+                    };
+                    let path = &endpoint.path;
+                    let handler = format!(
+                        "{}{}",
+                        endpoint.method.to_lowercase(),
+                        path.replace("/", "_")
+                            .replace(":", "")
+                            .replace("{", "by_")
+                            .replace("}", "")
+                    );
+                    routes.push_str(&format!(
+                        "    .route(\"{}\", {}().to({}))\n",
+                        path, method, handler
+                    ));
+                }
+            }
+        }
+        routes
+    }
 
-    //     match (endpoint.method.as_str(), endpoint.path.as_str()) {
-    //         ("GET", path) if path == format!("/{}", model_lower) => {
-    //             format!(
-    //                 "use axum::extract::State;\n\
-    //                  use axum::Json;\n\
-    //                  use crate::application::services::{}Service;\n\
-    //                  use crate::domain::error::AppError;\n\
-    //                  use crate::domain::models::{}::{};\n\n\
-    //                  pub async fn {}(State(state): State<AppState>) -> Result<Json<Vec<{}>>, AppError> {{\n\
-    //                      let items = state.{}.get_all().await?;\n\
-    //                      Ok(Json(items))\n\
-    //                  }}",
-    //                 model_name, model_lower, model_name, handler_name, model_name, service_field
-    //             )
-    //         }
-    //         ("GET", path) if path.starts_with(&format!("/{}/", model_lower)) => {
-    //             format!(
-    //                 "use axum::extract::{{State, Path}};\n\
-    //                  use axum::Json;\n\
-    //                  use crate::application::services::{}Service;\n\
-    //                  use crate::domain::error::AppError;\n\
-    //                  use crate::domain::models::{}::{};\n\n\
-    //                  pub async fn {}(State(state): State<AppState>, Path(id): Path<i32>) -> Result<Json<Option<{}>>, AppError> {{\n\
-    //                      let item = state.{}.get_by_id(id).await?;\n\
-    //                      Ok(Json(item))\n\
-    //                  }}",
-    //                 model_name, model_lower, model_name, handler_name, model_name, service_field
-    //             )
-    //         }
-    //         ("POST", path) if path == format!("/{}", model_lower) => {
-    //             format!(
-    //                 "use axum::extract::State;\n\
-    //                  use axum::Json;\n\
-    //                  use crate::application::services::{}Service;\n\
-    //                  use crate::domain::error::AppError;\n\
-    //                  use crate::domain::models::{}::{};\n\n\
-    //                  pub async fn {}(State(state): State<AppState>, Json(payload): Json<{}>) -> Result<Json<{}>, AppError> {{\n\
-    //                      let item = state.{}.create(payload).await?;\n\
-    //                      Ok(Json(item))\n\
-    //                  }}",
-    //                 model_name, model_lower, model_name, handler_name, model_name, model_name, service_field
-    //             )
-    //         }
-    //         _ => format!(
-    //             "// TODO: Implement handler for {} {}",
-    //             endpoint.method, endpoint.path
-    //         ),
-    //     }
-    // }
 
     pub fn generate_middleware_content(&self, middleware: &Middleware, _db_type: &str) -> String {
         let model_lower = middleware.model.to_lowercase();
-        format!(
-            "use crate::adapters::http::http::AppState;\n\n
-             use crate::domain::error::AppError;\n\n
-             use axum::{{extract::{{State,Request}},  middleware::Next, response::Response}};\n\n
-             pub async fn {}_middleware(\n\
-                 State(state): State<AppState>,\n\
-                 request: Request,\n
-                 next: Next,\n\
-             ) -> Result<Response, AppError> {{\n\
-                 // Example middleware: Log the request\n\
-                 let service = state.{}_service;
-                 tracing::info!(\"Processing request for {} model\");\n\
-                 let response = next.run(request).await;\n\
-                 Ok(response)\n\
-             }}",
-            model_lower,model_lower, middleware.model
-        )
+        match self.config.framework {
+            Framework::Axum => format!(
+                "use crate::adapters::http::http::AppState;\n\
+                 use crate::domain::error::AppError;\n\
+                 use axum::{{extract::{{State, Request}}, middleware::Next, response::Response}};\n\n\
+                 pub async fn {}_middleware(\n\
+                     State(state): State<AppState>,\n\
+                     request: Request,\n\
+                     next: Next,\n\
+                 ) -> Result<Response, AppError> {{\n\
+                     let service = state.{}_service;\n\
+                     tracing::info!(\"Processing request for {} model\");\n\
+                     let response = next.run(request).await;\n\
+                     Ok(response)\n\
+                 }}",
+                model_lower, model_lower, middleware.model
+            ),
+            Framework::ActixWeb => format!(
+                "use crate::adapters::http::http::AppState;
+                use actix_web::{{
+                        body::BoxBody,
+                        dev::{{ ServiceRequest, ServiceResponse}},
+                        middleware::Next,
+                        web, Error,
+                    }};
+                 pub async fn {}_middleware(\n\
+                     req: ServiceRequest,\n\
+                     next: Next<BoxBody>,\n\
+                 ) -> Result<ServiceResponse, Error> {{\n\
+                     let state = req.app_data::<web::Data<AppState>>().unwrap();\n\
+                     let service = state.{}_service.clone();\n\
+                     tracing::info!(\"Processing request for {} model\");\n\
+                     let res = next.call(req).await?;\n\
+                     Ok(res)\n\
+                 }}",
+                model_lower, model_lower, middleware.model
+            ),
+        }
     }
 
     pub fn generate_repository_trait(&self, model: &Model) -> String {
@@ -228,32 +223,64 @@ impl Template {
     }
 
     pub fn generate_error_content(&self) -> String {
-        "use axum::{response::IntoResponse, http::StatusCode};\n\
-         use thiserror::Error;\n\n\
-         #[derive(Error, Debug)]\n\
-         pub enum AppError {\n\
-             #[error(\"Database error: {0}\")]\n\
-             Database(#[from] sqlx::Error),\n\
-             #[error(\"Not found: {0}\")]\n\
-             NotFound(String),\n\
-             #[error(\"Unauthorized: {0}\")]\n\
-             Unauthorized(String),\n\
-         }\n\n\
-         impl IntoResponse for AppError {\n\
-             fn into_response(self) -> axum::response::Response {\n\
-                 match self {\n\
-                     AppError::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response(),\n\
-                     AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg).into_response(),\n\
-                     AppError::Unauthorized(_) => (StatusCode::UNAUTHORIZED, self.to_string()).into_response(),\n
-
-                 }\n\
-             }\n\
-         }".to_string()
+        match self.config.framework {
+            Framework::Axum => {
+                "use axum::{response::IntoResponse, http::StatusCode};\n\
+                 use thiserror::Error;\n\n\
+                 #[derive(Error, Debug)]\n\
+                 pub enum AppError {\n\
+                     #[error(\"Database error: {0}\")]\n\
+                     Database(#[from] sqlx::Error),\n\
+                     #[error(\"Not found: {0}\")]\n\
+                     NotFound(String),\n\
+                     #[error(\"Unauthorized: {0}\")]\n\
+                     Unauthorized(String),\n\
+                 }\n\n\
+                 impl IntoResponse for AppError {\n\
+                     fn into_response(self) -> axum::response::Response {\n\
+                         match self {\n\
+                             AppError::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response(),\n\
+                             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg).into_response(),\n\
+                             AppError::Unauthorized(_) => (StatusCode::UNAUTHORIZED, self.to_string()).into_response(),\n\
+                         }\n\
+                     }\n\
+                 }".to_string()
+            }
+            Framework::ActixWeb => {
+                "use actix_web::{error::Error as ActixError, HttpResponse, http::StatusCode};\n\
+                 use thiserror::Error;\n\n\
+                 #[derive(Error, Debug)]\n\
+                 pub enum AppError {\n\
+                     #[error(\"Database error: {0}\")]\n\
+                     Database(#[from] sqlx::Error),\n\
+                     #[error(\"Not found: {0}\")]\n\
+                     NotFound(String),\n\
+                     #[error(\"Unauthorized: {0}\")]\n\
+                     Unauthorized(String),\n\
+                 }\n\n\
+                 impl actix_web::error::ResponseError for AppError {\n\
+                     fn error_response(&self) -> HttpResponse {\n\
+                         match self {\n\
+                             AppError::Database(_) => HttpResponse::InternalServerError().body(self.to_string()),\n\
+                             AppError::NotFound(msg) => HttpResponse::NotFound().body(msg.clone()),\n\
+                             AppError::Unauthorized(_) => HttpResponse::Unauthorized().body(self.to_string()),\n\
+                         }\n\
+                     }\n\
+                 }".to_string()
+            }
+        }
     }
 
     pub fn generate_http_content(&self) -> String {
+        match self.config.framework {
+            Framework::Axum => self.generate_axum_http_content(),
+            Framework::ActixWeb => self.generate_actix_http_content(),
+        }
+    }
+    
+    fn generate_axum_http_content(&self) -> String {
+        // Your existing Axum implementation (slightly adjusted for clarity)
         let template = self;
-        // Generate AppState struct with fields for each model's service
         let app_state_fields = template.config.models.iter().map(|model| {
             let service_name = format!("{}_service", model.name.to_lowercase());
             let repo_type = format!("Sqlx{}Repository", model.name);
@@ -267,8 +294,7 @@ impl Template {
              }}",
             app_state_fields
         );
-    
-        // Generate parameters for HttpServer::new
+        
         let new_params = template.config.models.iter()
             .map(|m| {
                 let service_name = format!("{}_service", m.name.to_lowercase());
@@ -276,8 +302,7 @@ impl Template {
             })
             .collect::<Vec<_>>()
             .join(", ");
-    
-        // Generate state initialization in HttpServer::new
+        
         let state_fields = template.config.models.iter()
             .map(|m| {
                 let service_name = format!("{}_service", m.name.to_lowercase());
@@ -285,50 +310,30 @@ impl Template {
             })
             .collect::<Vec<_>>()
             .join("\n");
-    
-        // Generate handler functions
+        
         let handlers: Vec<String> = template.config.models.iter().flat_map(|model| {
             model.endpoints.clone().map(|endpoint| {
                 endpoint.iter().map(|endpoint|
-
-                generate_handler(model, endpoint)
+                    generate_handler(model, endpoint, Framework::Axum)
                 ).collect::<Vec<_>>()
             })
         }).flatten().collect();
-
-        let handlers = format!(
-            "{}\n\n\
-             ",
-             handlers.join("\n\n")
-        );
-    
-        // Get the router content
-        let router = template.generate_router();
-    
+        let handlers = handlers.join("\n\n");
+        
+        let router = template.generate_axum_router();
+        
         format!(
             r#"
-    /*!
-        Module `http` exposes an HTTP server that handles HTTP requests to the application. Its
-        implementation is opaque to module consumers.
-    */
-    
     use std::{{net::SocketAddr, sync::Arc}};
-    
     use anyhow::Context;
-    use axum::{{
-        routing::{{get, post}},Json,
-        Router,
-        http::StatusCode,
-        extract::*,
-    }};
+    use serde::*;
+    use axum::{{routing::{{get, post}}, Router, http::StatusCode, extract::*}};
     use tokio::net;
     use tower_http::{{cors::CorsLayer, trace::TraceLayer}};
     use crate::infrastructure::*;
     use crate::domain::*;
     use crate::application::services;
     use crate::domain::error::AppError;
-    use serde::Deserialize;
-    
     
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct HttpServerConfig<'a> {{
@@ -395,6 +400,121 @@ impl Template {
     
     async fn health_route() -> (StatusCode, &'static str) {{
         (StatusCode::OK, "OK")
+    }}
+            "#
+        )
+    }
+    
+    fn generate_actix_http_content(&self) -> String {
+        let template = self;
+        let app_state_fields = template.config.models.iter().map(|model| {
+            let service_name = format!("{}_service", model.name.to_lowercase());
+            let repo_type = format!("Sqlx{}Repository", model.name);
+            format!("    pub {}: Arc<services::{}Service<{}>>,\n", service_name, model.name, repo_type)
+        }).collect::<String>();
+        
+        let app_state = format!(
+            "#[derive(Clone)]\n\
+             pub struct AppState {{\n\
+             {}\n\
+             }}",
+            app_state_fields
+        );
+        
+        let new_params = template.config.models.iter()
+            .map(|m| {
+                let service_name = format!("{}_service", m.name.to_lowercase());
+                format!("{}: services::{}Service<Sqlx{}Repository>", service_name, m.name, m.name)
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        
+        let state_fields = template.config.models.iter()
+            .map(|m| {
+                let service_name = format!("{}_service", m.name.to_lowercase());
+                format!("        {}: {},", service_name, service_name)
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let self_state_fields = template.config.models.iter()
+            .map(|m| {
+                let service_name = format!("{}_service", m.name.to_lowercase());
+                format!("        {}: Arc::new(self.{}),", service_name, service_name)
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        
+        let handlers: Vec<String> = template.config.models.iter().flat_map(|model| {
+            model.endpoints.clone().map(|endpoint| {
+                endpoint.iter().map(|endpoint|
+                    generate_handler(model, endpoint, Framework::ActixWeb)
+                ).collect::<Vec<_>>()
+            })
+        }).flatten().collect();
+        let handlers = handlers.join("\n\n");
+        
+        let router = template.generate_actix_router();
+        
+        format!(
+            r#"
+    use actix_web::{{web, App, HttpResponse}};
+    use std::sync::Arc;
+    use anyhow::Context;
+    use crate::infrastructure::*;
+    use crate::domain::*;
+    use crate::application::services;
+    use crate::domain::error::AppError;
+    use serde::*;
+    
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct HttpServerConfig {{
+        pub port: String,
+    }}
+    
+    {app_state}
+    
+    {handlers}
+    
+    pub struct HttpServer {{
+    {new_params},
+    config: HttpServerConfig
+    }}
+    
+    impl HttpServer {{
+
+        pub async fn new(
+        {new_params},
+        config: HttpServerConfig,
+        ) -> anyhow::Result<Self> {{
+            Ok(
+            Self {{config, {state_fields}}} 
+            )
+        }}
+
+        pub async fn run(self) -> anyhow::Result<()> {{
+            let state = web::Data::new(AppState {{
+    {self_state_fields}
+            }});
+    
+            actix_web::HttpServer::new(move || {{
+                App::new()
+                    .app_data(state.clone())
+                    .route("/health", web::get().to(health_route))
+                    .service(
+                        web::scope("/api")
+    {router}
+                    )
+            }})
+            .bind(format!("0.0.0.0:{{}}", self.config.port.parse::<u16>().unwrap_or(3000)))?
+            .run()
+            .await
+            .context("received error from running server")?;
+            Ok(())
+        }}
+    }}
+    
+    async fn health_route() -> impl actix_web::Responder {{
+        HttpResponse::Ok().body("OK")
     }}
             "#
         )
