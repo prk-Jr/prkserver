@@ -35,6 +35,7 @@ impl Template {
                 for endpoint in endpoints {
                     let method = endpoint.method.to_lowercase();
                     let path = &endpoint.path;
+                    let middlewares =  endpoint.middlewares.clone().unwrap_or_default().iter().map(|f| f.to_lowercase().replace("middleware", "_middleware").to_string()).map(|f| format!(".layer(axum::middleware::from_fn_with_state(state.clone(), super::{}::{}))", &f, &f)).collect::<String>();
                     let handler = format!(
                         "{}{}",
                         method,
@@ -44,8 +45,8 @@ impl Template {
                             .replace("}", "")
                     );
                     routes.push_str(&format!(
-                        "    .route(\"{}\", {}({}))\n",
-                        path, method, handler
+                        "    .route(\"{}\", {}({}){})\n",
+                        path, method, handler, middlewares
                     ));
                 }
             }
@@ -124,22 +125,21 @@ impl Template {
     pub fn generate_middleware_content(&self, middleware: &Middleware, _db_type: &str) -> String {
         let model_lower = middleware.model.to_lowercase();
         format!(
-            "use axum::{{extract::State, middleware::Next, response::Response, http::Request}};\n\
-             use crate::adapters::http::http::AppState;\n\
-             use crate::domain::error::AppError;\n\n\
-             use axum::body::Body;\n\n
-
-             pub async fn {}_middleware<B>(\n\
+            "use crate::adapters::http::http::AppState;\n\n
+             use crate::domain::error::AppError;\n\n
+             use axum::{{extract::{{State,Request}},  middleware::Next, response::Response}};\n\n
+             pub async fn {}_middleware(\n\
                  State(state): State<AppState>,\n\
-                 request: Request<Body>,\n
+                 request: Request,\n
                  next: Next,\n\
              ) -> Result<Response, AppError> {{\n\
                  // Example middleware: Log the request\n\
+                 let service = state.{}_service;
                  tracing::info!(\"Processing request for {} model\");\n\
                  let response = next.run(request).await;\n\
                  Ok(response)\n\
              }}",
-            model_lower, middleware.model
+            model_lower,model_lower, middleware.model
         )
     }
 
@@ -236,12 +236,16 @@ impl Template {
              Database(#[from] sqlx::Error),\n\
              #[error(\"Not found: {0}\")]\n\
              NotFound(String),\n\
+             #[error(\"Unauthorized: {0}\")]\n\
+             Unauthorized(String),\n\
          }\n\n\
          impl IntoResponse for AppError {\n\
              fn into_response(self) -> axum::response::Response {\n\
                  match self {\n\
                      AppError::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response(),\n\
                      AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg).into_response(),\n\
+                     AppError::Unauthorized(_) => (StatusCode::UNAUTHORIZED, self.to_string()).into_response(),\n
+
                  }\n\
              }\n\
          }".to_string()
@@ -358,7 +362,7 @@ impl Template {
     
             let router = Router::new()
                 .route("/health", get(health_route))
-                .nest("/api", api_routes())
+                .nest("/api", api_routes(state.clone()))
                 .layer(CorsLayer::permissive())
                 .layer(trace_layer)
                 .with_state(state);
@@ -384,7 +388,7 @@ impl Template {
         }}
     }}
     
-    fn api_routes() -> Router<AppState> {{
+    fn api_routes(state: AppState) -> Router<AppState> {{
         Router::new()
     {router}
     }}
