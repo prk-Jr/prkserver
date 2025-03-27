@@ -8,9 +8,9 @@ license = "MIT"
 description = "`prkserver` is a CLI tool that helps create a backend server in Rust using Axum and SQLx. It configures everything based on a provided `config.toml` file."
 repository = "https://github.com/prk-Jr/prkserver.git"
 
-crate-type = "bin"
-
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8.14"
 convert_case = "0.6.0"
+# async-trait = "0.1.81"
+tokio = { version = "1.38.0", features = ["full"] }  # Added for async runtime

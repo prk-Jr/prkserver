@@ -1,45 +1,55 @@
-pub fn main_content(router: String, extra_imports: String) -> String {
+use crate::domain::models::config::Config;
+
+pub fn main_content(config: &Config) -> String {
+    // Generate repository and service initializations dynamically
+    let mut repo_initializations = String::new();
+    let mut service_initializations = String::new();
+    let mut service_params = String::new();
+
+    for model in &config.models {
+        let model_lower = model.name.to_lowercase();
+        let repo_name = format!("Sqlx{}Repository", model.name);
+        let service_name = format!("{}Service", model.name);
+        let repo_var = format!("{}_repo", model_lower);
+        let service_var = format!("{}_service", model_lower);
+
+        // Repository initialization
+        repo_initializations.push_str(&format!(
+            "    let {} = infrastructure::repositories::{}::new(database_connection.clone());\n",
+            repo_var, repo_name
+        ));
+
+        // Service initialization
+        service_initializations.push_str(&format!(
+            "    let {} = application::services::{}::new({});\n",
+            service_var, service_name, repo_var
+        ));
+
+        // Collect service parameters for HttpServer::new
+        service_params.push_str(&format!("{}, ", service_var));
+    }
+
+    // Remove trailing comma and space from service_params
+    let service_params = service_params.trim_end_matches(", ");
+
+    // Return the formatted main.rs content
     format!(
         r#"
-    use axum::Router;
+mod database_connection;
+mod adapters;
+mod domain;
+mod application;
+mod infrastructure;
 
-    use axum::routing::*;
-    
-    mod database_connection;
-    use database_connection::*;
-    
-    mod routes;
-    use routes::*;
-
-    mod models;
-
-    {}
-    
-    
-    #[tokio::main]
-    async fn main() {{
-        // A minimal tracing middleware for request logging.
-        tracing_subscriber::fmt::init();
-        // connect to the database
-        let database_connection = connect_to_database()
-        .await
-        .expect("Could not connect to database");
-        println!("Connected to the database without any error");
-        
-        
-        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-        println!("Server running on port 3000");
-        // Trace layer
-         let trace_layer = tower_http::trace::TraceLayer::new_for_http().make_span_with(
-            |request: &axum::extract::Request<_>| {{
-                let uri = request.uri().to_string();
-                tracing::info_span!("http_request", method = ?request.method(), uri)
-            }},
-        );
-        let app = {}.layer(trace_layer).with_state(database_connection);
-        axum::serve(listener, app).await.unwrap();
-    }}
-        "#,
-        extra_imports, router
+#[tokio::main]
+async fn main() {{ 
+    tracing_subscriber::fmt::init();
+    let database_connection = database_connection::connect_to_database().await.expect("Could not connect to database");
+    let config = adapters::http::http::HttpServerConfig {{ port: "3000" }};
+{repo_initializations}{service_initializations}
+    let http_server = adapters::http::http::HttpServer::new({service_params}, config).await.expect("Failed to create HTTP server");
+    http_server.run().await.expect("Failed to run HTTP server");
+}}
+        "#
     )
 }

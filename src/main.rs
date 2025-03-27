@@ -1,39 +1,18 @@
-mod models;
-use models::*;
-
-mod endpoints;
-use endpoints::*;
-
-mod config;
-use config::*;
-
-mod template;
-use template::*;
-
+mod domain;
+mod application;
+mod infrastructure;
+mod adapters;
 mod output;
 
-mod middleware;
-use middleware::*;
+use adapters::cli::cli_adapter::CliAdapter;
+use application::services::project_service::ProjectService;
+use infrastructure::file_system::local_file_system::LocalFileSystem;
 
-// mod authorization;
-// use authorization::*;
+#[tokio::main]
+async fn main() {
+    let file_system = LocalFileSystem;
+    let project_service = ProjectService::new(file_system);
+    let cli_adapter = CliAdapter::new(project_service);
 
-fn main() {
-    // let matches = Command::new("prkserver")
-    //     .version("1.0")
-    //     .about("Generates a backend project with Axum and SQLx based on a config file")
-    //     .arg(Arg::new("config").required(true).index(1))
-    //     .get_matches();
-
-    // let config_path = matches.get_one::<&str>("config").unwrap();
-
-    let config: Config = read_config("./config.toml").expect("Failed to read config.toml");
-
-    match generate_project(&config) {
-        Ok(_) => println!(
-            "Project '{}' created successfully. \n\ncd {}\ngit init\ncargo fmt",
-            config.project_name, config.project_name
-        ),
-        Err(e) => eprintln!("Error creating project: {}", e),
-    }
+    cli_adapter.run("./config.toml").await;
 }
