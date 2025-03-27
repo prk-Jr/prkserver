@@ -70,6 +70,7 @@ endpoints = [
 name = "UserLoginHistory"
 table_name = "user_login_history"
 fields = [
+    { name = "id", type = "i32" },
     { name = "user_id", type = "i32" },
     { name = "token", type = "String" },
 ]
