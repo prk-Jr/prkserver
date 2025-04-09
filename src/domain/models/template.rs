@@ -158,6 +158,7 @@ impl Template {
         let pool_type = match database_type.to_lowercase().as_str() {
             "mysql" => "sqlx::MySqlPool",
             "postgres" => "sqlx::PgPool",
+            "sqlite" => "sqlx::SqlitePool",
             _ => panic!("Unsupported database type: {}", database_type),
         };
         format!(
