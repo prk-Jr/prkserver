@@ -1,7 +1,11 @@
 use convert_case::{Case, Casing};
 
 pub fn database_connection_content(database_type: &str) -> String {
-    let pool_options = match database_type.to_case(Case::UpperCamel).to_lowercase().as_str() {
+    let pool_options = match database_type
+        .to_case(Case::UpperCamel)
+        .to_lowercase()
+        .as_str()
+    {
         "sqlite" => "Sqlite",
         "mysql" => "MySql",
         _ => "Pg",

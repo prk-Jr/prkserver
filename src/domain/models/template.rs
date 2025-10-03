@@ -1,4 +1,7 @@
-use crate::{domain::models::config::{Config,  Middleware, Model}, output::generate_handler};
+use crate::{
+    domain::models::config::{Config, Middleware, Model},
+    output::generate_handler,
+};
 
 use super::config::Framework;
 
@@ -12,7 +15,9 @@ impl Template {
     }
 
     pub fn generate_model_content(&self, model: &Model) -> String {
-        let fields = model.fields.iter()
+        let fields = model
+            .fields
+            .iter()
             .map(|f| format!("    pub {}: {},", f.name, f.field_type))
             .collect::<Vec<_>>()
             .join("\n");
@@ -35,7 +40,6 @@ impl Template {
             Framework::Axum => self.generate_axum_router(),
             Framework::ActixWeb => self.generate_actix_router(),
         }
-        
     }
 
     fn generate_axum_router(&self) -> String {
@@ -94,7 +98,6 @@ impl Template {
         }
         routes
     }
-
 
     pub fn generate_middleware_content(&self, middleware: &Middleware, _db_type: &str) -> String {
         let model_lower = middleware.model.to_lowercase();
@@ -219,7 +222,18 @@ impl Template {
                     }}\n\
                  // Add other methods as needed\n\
              }}",
-            model_name.to_lowercase(), model_name, model_name.to_lowercase(), model_name, model_name, model_name, model_name, model_name, model_name, model_name, model_name, model_name
+            model_name.to_lowercase(),
+            model_name,
+            model_name.to_lowercase(),
+            model_name,
+            model_name,
+            model_name,
+            model_name,
+            model_name,
+            model_name,
+            model_name,
+            model_name,
+            model_name
         )
     }
 
@@ -278,16 +292,24 @@ impl Template {
             Framework::ActixWeb => self.generate_actix_http_content(),
         }
     }
-    
+
     fn generate_axum_http_content(&self) -> String {
         // Your existing Axum implementation (slightly adjusted for clarity)
         let template = self;
-        let app_state_fields = template.config.models.iter().map(|model| {
-            let service_name = format!("{}_service", model.name.to_lowercase());
-            let repo_type = format!("Sqlx{}Repository", model.name);
-            format!("    pub {}: Arc<services::{}Service<{}>>,\n", service_name, model.name, repo_type)
-        }).collect::<String>();
-        
+        let app_state_fields = template
+            .config
+            .models
+            .iter()
+            .map(|model| {
+                let service_name = format!("{}_service", model.name.to_lowercase());
+                let repo_type = format!("Sqlx{}Repository", model.name);
+                format!(
+                    "    pub {}: Arc<services::{}Service<{}>>,\n",
+                    service_name, model.name, repo_type
+                )
+            })
+            .collect::<String>();
+
         let app_state = format!(
             "#[derive(Clone)]\n\
              pub struct AppState {{\n\
@@ -295,34 +317,50 @@ impl Template {
              }}",
             app_state_fields
         );
-        
-        let new_params = template.config.models.iter()
+
+        let new_params = template
+            .config
+            .models
+            .iter()
             .map(|m| {
                 let service_name = format!("{}_service", m.name.to_lowercase());
-                format!("{}: services::{}Service<Sqlx{}Repository>", service_name, m.name, m.name)
+                format!(
+                    "{}: services::{}Service<Sqlx{}Repository>",
+                    service_name, m.name, m.name
+                )
             })
             .collect::<Vec<_>>()
             .join(", ");
-        
-        let state_fields = template.config.models.iter()
+
+        let state_fields = template
+            .config
+            .models
+            .iter()
             .map(|m| {
                 let service_name = format!("{}_service", m.name.to_lowercase());
                 format!("        {}: Arc::new({}),", service_name, service_name)
             })
             .collect::<Vec<_>>()
             .join("\n");
-        
-        let handlers: Vec<String> = template.config.models.iter().flat_map(|model| {
-            model.endpoints.clone().map(|endpoint| {
-                endpoint.iter().map(|endpoint|
-                    generate_handler(model, endpoint, Framework::Axum)
-                ).collect::<Vec<_>>()
+
+        let handlers: Vec<String> = template
+            .config
+            .models
+            .iter()
+            .flat_map(|model| {
+                model.endpoints.clone().map(|endpoint| {
+                    endpoint
+                        .iter()
+                        .map(|endpoint| generate_handler(model, endpoint, Framework::Axum))
+                        .collect::<Vec<_>>()
+                })
             })
-        }).flatten().collect();
+            .flatten()
+            .collect();
         let handlers = handlers.join("\n\n");
-        
+
         let router = template.generate_axum_router();
-        
+
         format!(
             r#"
     use std::{{net::SocketAddr, sync::Arc}};
@@ -386,7 +424,7 @@ impl Template {
         }}
     
         pub async fn run(self) -> anyhow::Result<()> {{
-            tracing::debug!("listening on {{}}", self.listener.local_addr().unwrap());
+            tracing::info!("listening on {{}}", self.listener.local_addr().unwrap());
             axum::serve(self.listener, self.router)
                 .await
                 .context("received error from running server")?;
@@ -405,15 +443,23 @@ impl Template {
             "#
         )
     }
-    
+
     fn generate_actix_http_content(&self) -> String {
         let template = self;
-        let app_state_fields = template.config.models.iter().map(|model| {
-            let service_name = format!("{}_service", model.name.to_lowercase());
-            let repo_type = format!("Sqlx{}Repository", model.name);
-            format!("    pub {}: Arc<services::{}Service<{}>>,\n", service_name, model.name, repo_type)
-        }).collect::<String>();
-        
+        let app_state_fields = template
+            .config
+            .models
+            .iter()
+            .map(|model| {
+                let service_name = format!("{}_service", model.name.to_lowercase());
+                let repo_type = format!("Sqlx{}Repository", model.name);
+                format!(
+                    "    pub {}: Arc<services::{}Service<{}>>,\n",
+                    service_name, model.name, repo_type
+                )
+            })
+            .collect::<String>();
+
         let app_state = format!(
             "#[derive(Clone)]\n\
              pub struct AppState {{\n\
@@ -421,41 +467,60 @@ impl Template {
              }}",
             app_state_fields
         );
-        
-        let new_params = template.config.models.iter()
+
+        let new_params = template
+            .config
+            .models
+            .iter()
             .map(|m| {
                 let service_name = format!("{}_service", m.name.to_lowercase());
-                format!("{}: services::{}Service<Sqlx{}Repository>", service_name, m.name, m.name)
+                format!(
+                    "{}: services::{}Service<Sqlx{}Repository>",
+                    service_name, m.name, m.name
+                )
             })
             .collect::<Vec<_>>()
             .join(", ");
-        
-        let state_fields = template.config.models.iter()
+
+        let state_fields = template
+            .config
+            .models
+            .iter()
             .map(|m| {
                 let service_name = format!("{}_service", m.name.to_lowercase());
                 format!("        {}: {},", service_name, service_name)
             })
             .collect::<Vec<_>>()
             .join("\n");
-        let self_state_fields = template.config.models.iter()
+        let self_state_fields = template
+            .config
+            .models
+            .iter()
             .map(|m| {
                 let service_name = format!("{}_service", m.name.to_lowercase());
                 format!("        {}: Arc::new(self.{}),", service_name, service_name)
             })
             .collect::<Vec<_>>()
             .join("\n");
-        
-        let handlers: Vec<String> = template.config.models.iter().flat_map(|model| {
-            model.endpoints.clone().map(|endpoint| {
-                endpoint.iter().map(|endpoint|
-                    generate_handler(model, endpoint, Framework::ActixWeb)
-                ).collect::<Vec<_>>()
+
+        let handlers: Vec<String> = template
+            .config
+            .models
+            .iter()
+            .flat_map(|model| {
+                model.endpoints.clone().map(|endpoint| {
+                    endpoint
+                        .iter()
+                        .map(|endpoint| generate_handler(model, endpoint, Framework::ActixWeb))
+                        .collect::<Vec<_>>()
+                })
             })
-        }).flatten().collect();
+            .flatten()
+            .collect();
         let handlers = handlers.join("\n\n");
-        
+
         let router = template.generate_actix_router();
-        
+
         format!(
             r#"
     use actix_web::{{web, App, HttpResponse}};

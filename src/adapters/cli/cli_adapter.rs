@@ -13,7 +13,10 @@ impl<F: FileSystem> CliAdapter<F> {
     }
 
     pub async fn run(&self, config_path: &str) {
-        let config_content = self.project_service.file_system.read_to_string(config_path)
+        let config_content = self
+            .project_service
+            .file_system
+            .read_to_string(config_path)
             .await
             .expect("Failed to read config.toml");
         let config: Config = toml::from_str(&config_content).expect("Failed to parse config.toml");
@@ -21,8 +24,16 @@ impl<F: FileSystem> CliAdapter<F> {
         match self.project_service.generate_project(config).await {
             Ok(()) => println!(
                 "Project '{}' created successfully.\n\ncd {}\ngit init\ncargo fmt",
-                self.project_service.file_system.read_to_string(config_path).await.unwrap(), // Simplified for demo
-                self.project_service.file_system.read_to_string(config_path).await.unwrap()
+                self.project_service
+                    .file_system
+                    .read_to_string(config_path)
+                    .await
+                    .unwrap(), // Simplified for demo
+                self.project_service
+                    .file_system
+                    .read_to_string(config_path)
+                    .await
+                    .unwrap()
             ),
             Err(e) => eprintln!("Error creating project: {}", e),
         }

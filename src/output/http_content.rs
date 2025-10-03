@@ -1,4 +1,4 @@
-use crate::domain::models::config::{Endpoint, Model, Framework};
+use crate::domain::models::config::{Endpoint, Framework, Model};
 
 pub fn generate_handler(model: &Model, endpoint: &Endpoint, framework: Framework) -> String {
     let method = endpoint.method.to_lowercase();

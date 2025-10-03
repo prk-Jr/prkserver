@@ -10,7 +10,8 @@ services:
       MYSQL_DATABASE: test_db
     ports:
       - "3306:3306"
-"#.to_string(),
+"#
+        .to_string(),
         _ => r#"
 version: '3.8'
 services:
@@ -21,6 +22,7 @@ services:
       POSTGRES_DB: test_db
     ports:
       - "5432:5432"
-"#.to_string(),
+"#
+        .to_string(),
     }
 }

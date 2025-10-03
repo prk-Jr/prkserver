@@ -1,7 +1,7 @@
-mod domain;
-mod application;
-mod infrastructure;
 mod adapters;
+mod application;
+mod domain;
+mod infrastructure;
 mod output;
 
 use adapters::cli::cli_adapter::CliAdapter;
